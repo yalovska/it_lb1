@@ -374,7 +374,7 @@ class DatabaseGUI:
                     messagebox.showerror("Помилка", f"Не вдалося додати рядок: {str(e)}")
 
     def edit_row(self):
-        """Редагування вибраного рядка"""
+        """Редагування вибраного рядка - ВИПРАВЛЕНА ВЕРСІЯ"""
         if not self.current_db:
             messagebox.showwarning("Увага", "Спочатку створіть або відкрийте базу даних")
             return
@@ -383,37 +383,41 @@ class DatabaseGUI:
         selected_row = self.tree.selection()
 
         if not selected_table or not selected_row:
-            messagebox.showwarning("Увага", "Виберіть таблицю та рядок")
+            messagebox.showwarning("Увага", "Виберіть таблицю та рядок для редагування")
             return
 
         table_name = self.tables_listbox.get(selected_table[0])
         row_id = self.tree.item(selected_row[0])['text']
 
-        # Отримуємо поточні дані рядка
-        rows = self.current_db.get_rows(table_name)
-        current_row = next((row for row in rows if str(row.get('id')) == row_id), None)
+        print(f"🔍 Спроба редагувати рядок з ID: {row_id} в таблиці: {table_name}")
+
+        # Отримуємо поточні дані рядка БЕЗПОСЕРЕДНЬО з бази даних
+        current_row = self.current_db.get_row_by_id(table_name, int(row_id))
 
         if not current_row:
-            messagebox.showerror("Помилка", "Рядок не знайдено")
+            messagebox.showerror("Помилка", f"Рядок з ID {row_id} не знайдено в таблиці '{table_name}'")
             return
 
         table_info = next((table for table in self.current_db.tables if table['name'] == table_name), None)
-        if table_info:
-            # Видаляємо ID з даних для редагування
-            edit_data = {k: v for k, v in current_row.items() if k != 'id'}
+        if not table_info:
+            messagebox.showerror("Помилка", f"Інформація про таблицю '{table_name}' не знайдена")
+            return
 
-            new_data = self.get_row_data(table_info['fields'], edit_data)
-            if new_data:
-                try:
-                    success = self.current_db.update_row(table_name, int(row_id), new_data)
-                    if success:
-                        self.display_table_data(table_name)
-                        self.status_var.set(f"Рядок з ID {row_id} оновлено")
-                        messagebox.showinfo("Успіх", "Рядок оновлено успішно!")
-                    else:
-                        messagebox.showerror("Помилка", "Не вдалося оновити рядок")
-                except Exception as e:
-                    messagebox.showerror("Помилка", f"Не вдалося оновити рядок: {str(e)}")
+        # Видаляємо ID з даних для редагування
+        edit_data = {k: v for k, v in current_row.items() if k != 'id'}
+
+        new_data = self.get_row_data(table_info['fields'], edit_data)
+        if new_data:
+            try:
+                success = self.current_db.update_row(table_name, int(row_id), new_data)
+                if success:
+                    self.display_table_data(table_name)
+                    self.status_var.set(f"Рядок з ID {row_id} успішно оновлено")
+                    messagebox.showinfo("Успіх", "Рядок оновлено успішно!")
+                else:
+                    messagebox.showerror("Помилка", f"Не вдалося оновити рядок з ID {row_id}")
+            except Exception as e:
+                messagebox.showerror("Помилка", f"Не вдалося оновити рядок: {str(e)}")
 
     def delete_row(self):
         """Видалення вибраного рядка"""
@@ -425,20 +429,23 @@ class DatabaseGUI:
         selected_row = self.tree.selection()
 
         if not selected_table or not selected_row:
-            messagebox.showwarning("Увага", "Виберіть таблицю та рядок")
+            messagebox.showwarning("Увага", "Виберіть таблицю та рядок для видалення")
             return
 
         table_name = self.tables_listbox.get(selected_table[0])
         row_id = self.tree.item(selected_row[0])['text']
 
-        if messagebox.askyesno("Підтвердження", f"Видалити рядок з ID {row_id}?"):
+        print(f"🗑️ Спроба видалити рядок з ID: {row_id} з таблиці: {table_name}")
+
+        if messagebox.askyesno("Підтвердження", f"Видалити рядок з ID {row_id} з таблиці '{table_name}'?"):
             try:
                 success = self.current_db.delete_row(table_name, int(row_id))
                 if success:
                     self.display_table_data(table_name)
-                    self.status_var.set(f"Рядок з ID {row_id} видалено успішно")
+                    self.status_var.set(f"Рядок з ID {row_id} успішно видалено")
+                    messagebox.showinfo("Успіх", "Рядок видалено успішно!")
                 else:
-                    messagebox.showerror("Помилка", "Рядок не знайдено")
+                    messagebox.showerror("Помилка", f"Рядок з ID {row_id} не знайдено")
             except Exception as e:
                 messagebox.showerror("Помилка", f"Не вдалося видалити рядок: {str(e)}")
 
