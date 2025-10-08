@@ -65,12 +65,11 @@ class Database:
         cursor = self.connection.cursor()
 
         try:
-            # Формування SQL запиту - використовуємо тільки поля з словника, не додаємо зайвий id
+            # Формування SQL запиту
             field_definitions = []
             for field_name, field_info in fields.items():
                 field_definitions.append(f"{field_name} TEXT")
 
-            # Додаємо PRIMARY KEY окремо
             create_query = f"CREATE TABLE IF NOT EXISTS {table_name} (id INTEGER PRIMARY KEY AUTOINCREMENT, {', '.join(field_definitions)})"
             print(f"📝 Виконуємо запит: {create_query}")
 
@@ -91,6 +90,26 @@ class Database:
             print(f"❌ SQLite помилка: {e}")
             self.connection.rollback()
             raise Exception(f"Помилка бази даних: {e}")
+
+    def get_row_by_id(self, table_name: str, row_id: int):
+        """Отримання конкретного рядка за ID"""
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(f"SELECT * FROM {table_name} WHERE id = ?", (row_id,))
+            row = cursor.fetchone()
+
+            if row:
+                columns = [description[0] for description in cursor.description]
+                row_dict = dict(zip(columns, row))
+                print(f"✅ Отримано рядок з ID {row_id} з таблиці '{table_name}'")
+                return row_dict
+            else:
+                print(f"❌ Рядок з ID {row_id} не знайдено в таблиці '{table_name}'")
+                return None
+
+        except sqlite3.Error as e:
+            print(f"❌ Помилка отримання рядка: {e}")
+            return None
 
     def add_row(self, table_name: str, data: Dict[str, Any]):
         """Додавання рядка"""
@@ -150,12 +169,15 @@ class Database:
             values.append(row_id)
 
             update_query = f"UPDATE {table_name} SET {set_clause} WHERE id = ?"
+            print(f"🔄 Оновлюємо рядок: {update_query} з значеннями: {values}")
             cursor.execute(update_query, values)
             self.connection.commit()
 
             success = cursor.rowcount > 0
             if success:
                 print(f"✅ Рядок з ID {row_id} оновлено")
+            else:
+                print(f"❌ Рядок з ID {row_id} не знайдено для оновлення")
             return success
 
         except sqlite3.Error as e:
@@ -173,6 +195,8 @@ class Database:
             success = cursor.rowcount > 0
             if success:
                 print(f"✅ Рядок з ID {row_id} видалено")
+            else:
+                print(f"❌ Рядок з ID {row_id} не знайдено для видалення")
             return success
 
         except sqlite3.Error as e:
