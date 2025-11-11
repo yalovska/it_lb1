@@ -1,0 +1,50 @@
+name: Python Project CI
+
+# Тригери запуску 
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# Список завдань (jobs)
+jobs:
+  # Назва єдиного завдання - "build"
+  build:
+    
+    # Матриця ОС 
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Збій на одній ОС не зупиняє інші
+      fail-fast: false
+      matrix:
+        # Список ОС для запуску
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Список версій Python для запуску
+        python-version: ["3.9", "3.10"]
+
+    # Кроки (steps) для кожної ОС
+    steps:
+    # 1. Отримання коду з репозиторію
+    - uses: actions/checkout@v4
+
+    # 2. Налаштування Python потрібної версії
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    # 3. Встановлення залежностей 
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Встановлюємо залежності з requirements.txt
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # Встановлюємо pytest окремо, якщо його немає в requirements
+        pip install pytest
+
+    # 4. Запуск тестів 
+    - name: Run tests
+      run: |
+        # Ця команда запустить pytest, який сам знайде tests.py
+        pytest
